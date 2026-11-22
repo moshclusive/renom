@@ -1,0 +1,3661 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Renom 2.1 - How It Works</title>
+  <link rel="icon" href="Assets/icon.png" type="image/png">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <script>
+    // Fallback when icon.png is missing
+    function imgErr(el) {
+      el.style.display = 'none';
+      el.parentNode.innerText = 'R';
+    }
+  </script>
+
+  <!-- ═══════════════════════════════════════════════════
+        GLOBAL — Variables · Reset · Base · Utilities
+  ════════════════════════════════════════════════════ -->
+  <style>
+    :root {
+      --bg-deep: #09090e;
+      --bg-surface: #11111a;
+      --bg-card: #161622;
+      --border: #232336;
+      --border-light: #34344a;
+
+      --text-primary: #ffffff;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+
+      --accent-indigo: #818cf8;
+      --accent-cyan: #22d3ee;
+      --accent-purple: #c084fc;
+      --accent-emerald: #34d399;
+      --accent-rose: #fb7185;
+      --accent-amber: #fbbf24;
+
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    code,
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--text-primary);
+      color: var(--bg-deep);
+      padding: 10px 20px;
+      border-radius: 100px;
+      font-weight: 600;
+      font-size: 14px;
+      opacity: 0;
+      transition: .3s;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* Layout */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    .section {
+      padding: 40px 0;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Grids */
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    @media(max-width:900px) {
+      .grid-4 {
+        grid-template-columns: repeat(2, 1fr)
+      }
+
+      .grid-3 {
+        grid-template-columns: 1fr
+      }
+    }
+
+    @media(max-width:600px) {
+
+      .grid-4,
+      .grid-2 {
+        grid-template-columns: 1fr
+      }
+    }
+
+    /* Shared: Token */
+    .token {
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      background: rgba(34, 211, 238, .1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    /* Shared: Section block header base */
+    .section-block-header {
+      border-radius: var(--radius-md);
+      padding: 20px 24px;
+      margin-bottom: 30px;
+    }
+
+    .section-block-title {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -.5px;
+      margin-bottom: 6px;
+    }
+
+    .section-block-desc {
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* Shared: Highlight Box */
+    .highlight-box {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-light);
+      color: var(--text-primary);
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      display: inline-block;
+      margin-top: 12px;
+      font-size: 13.5px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Toast -->
+  <div id="toast" class="toast">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+      stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+    Copied to clipboard
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════
+        NAVBAR
+  ════════════════════════════════════════════════════ -->
+  <style>
+    .navbar {
+      padding: 12px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-deep);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      gap: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 400;
+      font-size: 16px;
+      letter-spacing: -.5px;
+      flex-shrink: 0;
+    }
+
+    .brand-logo {
+      width: 28px;
+      height: 28px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      overflow: hidden;
+      cursor: pointer;
+      transition: .2s;
+    }
+
+    .brand-logo:hover {
+      border-color: var(--accent-cyan);
+    }
+
+    .brand-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 5px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .nav-links a {
+      color: inherit;
+      text-decoration: none;
+      transition: .2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--text-primary);
+    }
+
+    /* Scrollspy active state */
+    .nav-links a.active {
+      color: var(--accent-cyan);
+    }
+
+    @media(max-width: 900px) {
+      .navbar {
+        padding: 12px 20px;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 16px;
+      }
+
+      .nav-links {
+        gap: 16px;
+      }
+    }
+  </style>
+
+  <nav class="navbar">
+    <div class="brand">
+      <div class="brand-logo" id="scrollTopLogo" title="Back to top">
+        <img src="Assets/icon.png" alt="R" onerror="imgErr(this)">
+      </div>
+      Renom 2.1 <span style="color:var(--text-muted);font-weight:500;">How It Works & Quick Guide</span>
+    </div>
+
+    <div class="nav-links">
+      <a href="#logic">Logic</a>
+      <a href="#formatting">Formatting</a>
+      <a href="#findreplace">Find & Replace</a>
+      <a href="#ifthen">IF THEN</a>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════════
+        LOGIC — How Renom Works
+  ════════════════════════════════════════════════════ -->
+  <style>
+    /* Logic Hero Card */
+    .logic-hero-card {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      position: relative;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .logic-hero-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--accent-cyan);
+    }
+
+    .logic-hero-title {
+      color: var(--accent-cyan);
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: -.3px;
+    }
+
+    .logic-hero-desc {
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .logic-hero-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .logic-hero-list li {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      display: flex;
+      gap: 12px;
+      line-height: 1.5;
+    }
+
+    .logic-hero-list li svg {
+      flex-shrink: 0;
+      color: var(--accent-emerald);
+      margin-top: 2px;
+    }
+
+    .logic-hero-list strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    /* Logic Visual Diagram */
+    .logic-hero-visual {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .visual-header {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 4px;
+    }
+
+    .visual-group {
+      background: transparent;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      position: relative;
+    }
+
+    .visual-group.matched {
+      background: rgba(34, 211, 238, .04);
+      border-color: rgba(34, 211, 238, .3);
+    }
+
+    .visual-group-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .visual-group.matched .visual-group-label {
+      color: var(--accent-cyan);
+    }
+
+    .visual-file {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-primary);
+      padding: 8px 12px;
+      background: var(--bg-deep);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      border: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .visual-group.matched .visual-file {
+      border-color: rgba(34, 211, 238, .15);
+    }
+
+    .visual-file:last-child {
+      margin-bottom: 0;
+    }
+
+    .visual-file span {
+      color: var(--text-muted);
+    }
+
+    @media(max-width: 900px) {
+      .logic-hero-card {
+        grid-template-columns: 1fr;
+        padding: 24px;
+        gap: 30px;
+      }
+    }
+
+    /* Logic explanation text styles */
+    .logic-explanation {
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .logic-example-block {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .logic-example-files {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .logic-example-files .filename {
+      color: var(--text-primary);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .logic-example-result {
+      font-size: 13px;
+      color: var(--text-secondary);
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      margin-top: 8px;
+    }
+
+    .logic-example-result strong {
+      color: var(--accent-cyan);
+    }
+
+    /* Important Points Section */
+    .important-points-section {
+      margin-top: 30px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 30px;
+    }
+
+    .important-points-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .important-points-list {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .important-points-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .important-points-list li svg {
+      flex-shrink: 0;
+      color: var(--accent-amber);
+      margin-top: 2px;
+    }
+
+    @media(max-width: 768px) {
+      .important-points-list {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <section id="logic" class="section">
+    <div class="container">
+
+      <div class="logic-hero-card">
+        <div class="logic-hero-content">
+          <h3 class="logic-hero-title">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path
+                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+              </path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+            File Selection & Grouping Logic
+          </h3>
+
+          <div class="logic-explanation">
+            <p style="margin-bottom: 16px;">Renom does not always treat every file as completely separate.</p>
+            <p>If multiple files share the same base name, Renom treats them as one group and applies the same change to
+              all of them. The extension stays unchanged. As long as the main name is the same, the same change is
+              applied. The file base name is the part before the extension.</p>
+          </div>
+
+          <div class="logic-example-block">
+            <div class="logic-example-files">
+              <span class="filename">Logo design.eps</span>
+              <span class="filename">Logo design.jpg</span>
+            </div>
+            <div class="logic-example-result">
+              Both files share the same base name: <strong>Logo design</strong>.<br>
+              So the same change is applied to both files.
+            </div>
+          </div>
+
+          <div class="logic-example-block">
+            <div class="logic-example-files">
+              <span class="filename">Package design.eps</span>
+              <span class="filename">client_Brief.txt</span>
+            </div>
+            <div class="logic-example-result">
+              These files have different base names: <strong>Package design</strong> and
+              <strong>client_Brief</strong>.<br>
+              So they are treated separately.
+            </div>
+          </div>
+        </div>
+
+        <div class="logic-hero-visual">
+          <div class="visual-header">Original Files → Grouping</div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
+            <div>
+              <div class="visual-group-label"
+                style="margin-bottom: 10px; color: var(--text-muted); font-size: 11px; font-weight: 600;">Original File
+                Names</div>
+              <div class="visual-file">Logo design<span>.eps</span></div>
+              <div class="visual-file">Logo design<span>.jpg</span></div>
+              <div class="visual-file" style="margin-top: 12px;">Package design<span>.eps</span></div>
+              <div class="visual-file" style="margin-top: 12px;">client_Brief<span>.txt</span></div>
+            </div>
+
+            <div>
+              <div class="visual-group-label"
+                style="margin-bottom: 10px; color: var(--text-muted); font-size: 11px; font-weight: 600;">Grouped Result
+              </div>
+              <div class="visual-group matched" style="margin-bottom: 12px;">
+                <div class="visual-group-label">Group 1: "Logo design"</div>
+                <div class="visual-file">Logo design<span>.eps</span></div>
+                <div class="visual-file">Logo design<span>.jpg</span></div>
+              </div>
+
+              <div class="visual-group" style="margin-bottom: 12px;">
+                <div class="visual-group-label">Group 2: "Package design"</div>
+                <div class="visual-file">Package design<span>.eps</span></div>
+              </div>
+
+              <div class="visual-group">
+                <div class="visual-group-label">Group 3: "client_Brief"</div>
+                <div class="visual-file">client_Brief<span>.txt</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Important Points Section -->
+      <div class="important-points-section">
+        <div class="important-points-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-amber);">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          Important Points
+        </div>
+        <ul class="important-points-list">
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>You can click Preview to see the result before applying changes.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>If something is applied by mistake, click Undo Last Action to restore the previous state.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>The affected files remain selected, so you don't need to select them again. But if you select new
+              file(s), the previously selected files will be deselected and only the new files will remain
+              selected.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>You can select files or folders using Drag & Drop.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>When a folder is selected, files inside its subfolders are included automatically.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>When an IF option is selected, a sample value appears in the placeholder to help you understand what
+              to enter. IF option → placeholder example → what to type clear</span>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+  <div class="divider"></div>
+
+
+  <!-- ═══════════════════════════════════════════════════
+          FILE NAME FORMAT
+     ════════════════════════════════════════════════════ -->
+  <style>
+    /* Block header */
+    .block-header-format {
+      background: rgba(99, 102, 241, .05);
+      border: 1px solid rgba(99, 102, 241, .15);
+      border-left: 3px solid var(--accent-indigo);
+    }
+
+    .block-header-format .section-block-title {
+      color: var(--accent-indigo);
+    }
+
+    /* Format block wrapper */
+    .fmt-block {
+      margin-bottom: 20px;
+    }
+
+    /* Single-theme headings */
+    .fmt-heading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: none;
+      letter-spacing: .3px;
+      margin-bottom: 12px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+    }
+
+    .fmt-heading.clr-1 {
+      color: var(--accent-indigo);
+      background: rgba(99, 102, 241, .08);
+      border-left: 2px solid var(--accent-indigo);
+    }
+
+    /* Format card */
+    .fmt-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+    }
+
+    .fmt-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .fmt-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    .fmt-col-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      letter-spacing: .5px;
+    }
+
+    .fmt-box {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .fmt-val {
+      color: var(--text-primary);
+    }
+
+    .fmt-val.dim {
+      color: var(--text-muted);
+    }
+
+    .fmt-val.highlight {
+      color: var(--accent-emerald);
+      font-weight: 500;
+    }
+
+    .fmt-input {
+      background: transparent;
+      border: 1px solid var(--border-light);
+      color: var(--text-primary);
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      transition: .2s;
+    }
+
+    .fmt-input:hover {
+      border-color: var(--accent-indigo);
+    }
+
+    .fmt-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      font-family: 'Inter', sans-serif;
+      line-height: 1.4;
+    }
+
+    .insight-bar {
+      background: rgba(99, 102, 241, .05);
+      border-left: 2px solid var(--accent-indigo);
+      padding: 10px 14px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 20px;
+      border-radius: 0 4px 4px 0;
+      line-height: 1.5;
+    }
+
+    .insight-bar strong {
+      color: var(--text-primary);
+    }
+
+    .format-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      align-items: start;
+    }
+
+    .fmt-block {
+      margin-bottom: 0;
+    }
+
+    .fmt-heading {
+      margin-bottom: 0;
+      cursor: pointer;
+      min-height: 48px;
+      justify-content: space-between;
+      transition: .2s;
+      position: relative;
+      padding-right: 40px;
+    }
+
+    .fmt-heading:hover {
+      background: rgba(99, 102, 241, .12);
+      border-left-color: var(--accent-indigo);
+    }
+
+    .fmt-heading::after {
+      content: '+';
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 20px;
+      font-weight: 500;
+      color: #8b8b96;
+      line-height: 1;
+    }
+
+    .fmt-block.active {
+      grid-column: 1 / -1;
+    }
+
+    .fmt-block.active .fmt-heading {
+      margin-bottom: 12px;
+    }
+
+    .fmt-block.active .fmt-heading::after {
+      content: '−';
+    }
+
+    .fmt-card {
+      display: none;
+      animation: fmtReveal .15s ease;
+    }
+
+    .fmt-block.active .fmt-card {
+      display: block;
+    }
+
+    @keyframes fmtReveal {
+      from {
+        opacity: 0;
+        transform: translateY(-4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .format-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .fmt-columns {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .fmt-heading {
+        min-height: auto;
+        padding: 10px 40px 10px 12px;
+      }
+    }
+  </style>
+
+  <section id="formatting" class="section">
+    <div class="container">
+
+      <!-- Block Header -->
+      <div class="block-header-format section-block-header">
+        <div class="section-block-title">File Name Format</div>
+        <div class="section-block-desc">
+          Decide how the new file name will be created. Examples help you see the result in advance.
+        </div>
+      </div>
+
+      <div class="format-grid">
+
+        <!-- Leave blank -->
+        <div class="fmt-block">
+          <div class="fmt-heading clr-1">Leave blank</div>
+          <div class="fmt-card">
+            <p class="fmt-desc">
+              If the File Name Format field is left empty, Renom removes the old file name and replaces it with
+              automatic numbering based on your starting number (by default 01).
+            </p>
+            <div class="fmt-columns">
+              <div>
+                <div class="fmt-col-title">Original Files</div>
+                <div class="fmt-box">
+                  <span class="fmt-val dim">Invoice<span style="color:var(--text-primary)">.pdf</span></span>
+                  <span class="fmt-val dim">Receipt<span style="color:var(--text-primary)">.pdf</span></span>
+                  <span class="fmt-val dim">Report<span style="color:var(--text-primary)">.pdf</span></span>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">Format</div>
+                <div class="fmt-box">
+                  <div class="fmt-input" style="color:var(--text-muted);font-style:italic;cursor:default">[Leave Blank]
+                  </div>
+                  <div class="fmt-sub">Starting Number: 01</div>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">Result</div>
+                <div class="fmt-box">
+                  <span class="fmt-val highlight">01<span
+                      style="color:var(--text-primary);font-weight:normal">.pdf</span></span>
+                  <span class="fmt-val highlight">02<span
+                      style="color:var(--text-primary);font-weight:normal">.pdf</span></span>
+                  <span class="fmt-val highlight">03<span
+                      style="color:var(--text-primary);font-weight:normal">.pdf</span></span>
+                </div>
+              </div>
+            </div>
+            <div class="insight-bar">
+              <strong>Note:</strong> Only the file name changes. The extension stays unchanged.
+            </div>
+          </div>
+        </div>
+
+        <!-- Fill the Existing Format gap -->
+        <div class="fmt-block">
+          <div class="fmt-heading clr-1">Fill the Existing Format gap</div>
+          <div class="fmt-card">
+            <p class="fmt-desc">
+              Renom looks at file names that already have numbers in them, finds any missing number in the sequence, and
+              then renames the files to close that gap. The format is listed in the app's File Name Format options, and
+              the cheatsheet example shows it as turning File 01, File 03 into File 01, File 02
+            </p>
+            <div class="fmt-columns" style="grid-template-columns:1fr 1fr;">
+              <div>
+                <div class="fmt-col-title">Before</div>
+                <div class="fmt-box">
+                  <span class="fmt-val">File 01.txt</span>
+                  <span class="fmt-val">File 03.txt</span>
+                  <span class="fmt-val">File 05.txt</span>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">After</div>
+                <div class="fmt-box">
+                  <span class="fmt-val">File 01.txt</span>
+                  <span class="fmt-val highlight">File 02.txt <span
+                      style="color:var(--text-muted);font-size:11px;font-weight:normal">← was 03</span></span>
+                  <span class="fmt-val highlight">File 03.txt <span
+                      style="color:var(--text-muted);font-size:11px;font-weight:normal">← was 05</span></span>
+                </div>
+              </div>
+            </div>
+            <div class="insight-bar">
+              <strong>Note:</strong> This works only when the selected file names already contain numbers.
+            </div>
+          </div>
+        </div>
+
+        <!--{original} Your Custom Text -->
+        <div class="fmt-block">
+          <div class="fmt-heading clr-1">{original} Your Custom Text</div>
+          <div class="fmt-card">
+            <p class="fmt-desc">
+              Keeps the original file name and adds your custom text after it.
+            </p>
+            <div class="fmt-columns">
+              <div>
+                <div class="fmt-col-title">Original File</div>
+                <div class="fmt-box">
+                  <span class="fmt-val">Report.pdf</span>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">Format</div>
+                <div class="fmt-box">
+                  <div class="fmt-input" onclick="copyText('{original} Final')">{original} Final</div>
+                  <div class="fmt-sub">"Final" is the custom text</div>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">Result</div>
+                <div class="fmt-box">
+                  <span class="fmt-val highlight">Report Final.pdf</span>
+                </div>
+              </div>
+            </div>
+            <div class="insight-bar">
+              <strong>Note:</strong> The original name stays. Your text is simply added to it.
+            </div>
+          </div>
+        </div>
+
+        <!--{original} {date} -->
+        <div class="fmt-block">
+          <div class="fmt-heading clr-1">{original} {date}</div>
+          <div class="fmt-card">
+            <p class="fmt-desc">
+              This format keeps the original file name and adds the current date after it.
+            </p>
+            <div class="fmt-columns">
+              <div>
+                <div class="fmt-col-title">Original File</div>
+                <div class="fmt-box">
+                  <span class="fmt-val">Backup.zip</span>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">Format</div>
+                <div class="fmt-box">
+                  <div class="fmt-input" onclick="copyText('{original} {date}')">{original} {date}</div>
+                  <div class="fmt-sub">Date format: DD-MM-YYYY</div>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">Result</div>
+                <div class="fmt-box">
+                  <span class="fmt-val highlight">Backup 30-03-2026.zip</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!--{original} {time} -->
+        <div class="fmt-block">
+          <div class="fmt-heading clr-1">{original} {time}</div>
+          <div class="fmt-card">
+            <p class="fmt-desc">
+              This format keeps the original file name and adds the current time after it.
+            </p>
+            <div class="fmt-columns">
+              <div>
+                <div class="fmt-col-title">Original File</div>
+                <div class="fmt-box">
+                  <span class="fmt-val">Screenshot.png</span>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">Format</div>
+                <div class="fmt-box">
+                  <div class="fmt-input" onclick="copyText('{original} {time}')">{original} {time}</div>
+                  <div class="fmt-sub">Time format: HH-MM-SS</div>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">Result</div>
+                <div class="fmt-box">
+                  <span class="fmt-val highlight">Screenshot 14-30-52.png</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!--Your Custom Text {date} -->
+        <div class="fmt-block">
+          <div class="fmt-heading clr-1">Your Custom Text {date}</div>
+          <div class="fmt-card">
+            <p class="fmt-desc">
+              This format replaces the old file name with your custom text, adds the current date, and then adds
+              sequence numbering automatically.
+            </p>
+            <div class="fmt-columns">
+              <div>
+                <div class="fmt-col-title">Original File</div>
+                <div class="fmt-box">
+                  <span class="fmt-val">IMG_8930.jpg</span>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">Format</div>
+                <div class="fmt-box">
+                  <div class="fmt-input" onclick="copyText('Trip Photo {date}')">Trip Photo {date}</div>
+                  <div class="fmt-sub">"Trip Photo" is the custom text.</div>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">Result</div>
+                <div class="fmt-box">
+                  <span class="fmt-val highlight">Trip Photo 30-03-2026 01.jpg</span>
+                </div>
+              </div>
+            </div>
+            <div class="insight-bar">
+              <strong>Note:</strong> <i>Because the original name is not used here, Renom adds numbering to keep file
+                names unique.</i>
+            </div>
+          </div>
+        </div>
+
+        <!--{original} {datetime} -->
+        <div class="fmt-block">
+          <div class="fmt-heading clr-1">{original} {datetime}</div>
+          <div class="fmt-card">
+            <p class="fmt-desc">
+              This format keeps the original file name and adds both date and time after it.
+            </p>
+            <div class="fmt-columns">
+              <div>
+                <div class="fmt-col-title">Original File</div>
+                <div class="fmt-box">
+                  <span class="fmt-val">Export.mp4</span>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">Format</div>
+                <div class="fmt-box">
+                  <div class="fmt-input" onclick="copyText('{original} {datetime}')">{original} {datetime}</div>
+                  <div class="fmt-sub">Date and time will be added together.</div>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">Result</div>
+                <div class="fmt-box">
+                  <span class="fmt-val highlight">Export 2026-03-30_14-30-52.mp4</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!--Your Custom Text {time} -->
+        <div class="fmt-block">
+          <div class="fmt-heading clr-1">Your Custom Text {time}</div>
+          <div class="fmt-card">
+            <p class="fmt-desc">
+              This format replaces the old file name with your custom text, adds the current time, and then adds
+              sequence numbering automatically.
+            </p>
+            <div class="fmt-columns">
+              <div>
+                <div class="fmt-col-title">Original File</div>
+                <div class="fmt-box">
+                  <span class="fmt-val">Audio.wav</span>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">Format</div>
+                <div class="fmt-box">
+                  <div class="fmt-input" onclick="copyText('Session {time}')">Session {time}</div>
+                  <div class="fmt-sub">Replace "Session" with your own text.</div>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">Result</div>
+                <div class="fmt-box">
+                  <span class="fmt-val highlight">Session 14-30-52 01.wav</span>
+                </div>
+              </div>
+            </div>
+            <div class="insight-bar">
+              <strong>Note:</strong> Numbering is added because the original file name is not being kept.
+            </div>
+          </div>
+        </div>
+
+        <!--{original} -->
+        <div class="fmt-block">
+          <div class="fmt-heading clr-1">{original}</div>
+          <div class="fmt-card">
+            <p class="fmt-desc">
+              This format keeps the original file name exactly as it is.
+            </p>
+            <div class="fmt-columns">
+              <div>
+                <div class="fmt-col-title">Original File</div>
+                <div class="fmt-box">
+                  <span class="fmt-val">Photo.jpg</span>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">Format</div>
+                <div class="fmt-box">
+                  <div class="fmt-input" onclick="copyText('{original}')">{original}</div>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">Result</div>
+                <div class="fmt-box">
+                  <span class="fmt-val highlight">Photo.jpg</span>
+                </div>
+              </div>
+            </div>
+            <div class="insight-bar">
+              <strong>Note:</strong> This option does not add anything. It only preserves the original name.
+            </div>
+          </div>
+        </div>
+
+        <!--{folder name} -->
+        <div class="fmt-block">
+          <div class="fmt-heading clr-1">{folder name}</div>
+          <div class="fmt-card">
+            <p class="fmt-desc">
+              This format uses the name of the folder as the new file name. Since the original file name is not kept,
+              Renom also adds automatic numbering.
+            </p>
+            <div class="fmt-columns">
+              <div>
+                <div class="fmt-col-title">Original File</div>
+                <div class="fmt-box">
+                  <span class="fmt-val">Logo.png</span>
+                  <span class="fmt-val dim">Folder: Brand</span>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">Format</div>
+                <div class="fmt-box">
+                  <div class="fmt-input" onclick="copyText('{folder name}')">{folder name}</div>
+                </div>
+              </div>
+              <div>
+                <div class="fmt-col-title">Result</div>
+                <div class="fmt-box">
+                  <span class="fmt-val highlight">Brand 01.png</span>
+                </div>
+              </div>
+            </div>
+            <div class="insight-bar">
+              <strong>Note:</strong> This is useful when files need to be renamed based on their parent folder.
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom Text {created} / {modified} -->
+        <div class="fmt-block">
+          <div class="fmt-heading clr-1">Custom Text {created} / {modified}</div>
+          <div class="fmt-card">
+            <p class="fmt-desc">
+              These formats use your custom text together with the file's actual created date or modified date as the
+              new file name. Since the original file name is replaced, Renom automatically keeps the file extension.
+            </p>
+
+            <div class="fmt-columns">
+              <div>
+                <div class="fmt-col-title">Original File</div>
+                <div class="fmt-box">
+                  <span class="fmt-val">Invoice.pdf</span>
+                  <span class="fmt-val dim">Created: 15-01-2023</span>
+                  <span class="fmt-val dim">Modified: 30-03-2026</span>
+                </div>
+              </div>
+
+              <div>
+                <div class="fmt-col-title">Format</div>
+                <div class="fmt-box">
+                  <div class="fmt-input" onclick="copyText('Backup_{created}')">Backup_{created}</div>
+                  <div class="fmt-input" onclick="copyText('Backup_{modified}')">Backup_{modified}</div>
+                </div>
+              </div>
+
+              <div>
+                <div class="fmt-col-title">Result</div>
+                <div class="fmt-box">
+                  <span class="fmt-val highlight">Backup_15-01-2023 01.pdf</span>
+                  <span class="fmt-val highlight">Backup_30-03-2026 01.pdf</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="insight-bar">
+              <strong>Note:</strong> The original file name is removed. Your custom text stays, and Renom inserts either
+              the file's created date or modified date. Numbering is added automatically.
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+  <div class="divider"></div>
+
+
+  <!-- ═══════════════════════════════════════════════════
+        FIND & REPLACE
+  ════════════════════════════════════════════════════ -->
+  <style>
+    /* Block header — cyan theme */
+    .block-header-fr {
+      background: rgba(34, 211, 238, .05);
+      border: 1px solid rgba(34, 211, 238, .15);
+      border-left: 3px solid var(--accent-cyan);
+    }
+
+    .block-header-fr .section-block-title {
+      color: var(--accent-cyan);
+    }
+
+    /* Logic group */
+    .logic-group {
+      margin-bottom: 30px;
+    }
+
+    .logic-group-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+    }
+
+    /* Logic card */
+    .logic-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      transition: .2s;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      position: relative;
+      min-height: 54px;
+    }
+
+    .logic-card:hover {
+      border-color: var(--border-light);
+      background: var(--bg-card);
+    }
+
+    .logic-card.hidden {
+      display: none;
+    }
+
+    .logic-card.active {
+      grid-column: 1 / -1;
+      cursor: default;
+    }
+
+    .logic-card::after {
+      content: '+';
+      position: absolute;
+      right: 14px;
+      top: 14px;
+      font-size: 20px;
+      line-height: 1;
+      color: #8b8b96;
+      font-weight: 500;
+    }
+
+    .logic-card.active::after {
+      content: '−';
+    }
+
+    .logic-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0;
+      padding-right: 20px;
+    }
+
+    .logic-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+    }
+
+    .logic-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+      line-height: 1.4;
+      flex-grow: 1;
+      display: none;
+    }
+
+    .logic-code {
+      display: none;
+    }
+
+    .logic-card.active .logic-desc,
+    .logic-card.active .logic-code {
+      display: block;
+    }
+
+    .logic-card.active .logic-header {
+      margin-bottom: 10px;
+    }
+
+    /* Logic code block styling */
+    .logic-code {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-light);
+      padding: 12px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      transition: .2s;
+    }
+
+    .logic-code:hover {
+      border-color: var(--accent-cyan);
+    }
+
+    .lc-row {
+      display: block;
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+
+    .lc-row:last-child {
+      margin-bottom: 0;
+    }
+
+    /* File name */
+    .lc-filename-label {
+      color: var(--text-muted);
+      display: inline-block;
+      width: 70px;
+      flex-shrink: 0;
+    }
+
+    .lc-filename-text {
+      color: var(--text-primary);
+    }
+
+    .lc-highlight-find {
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    /* Find */
+    .lc-find-label {
+      color: var(--text-muted);
+      display: inline-block;
+      width: 70px;
+    }
+
+    .lc-find-val {
+      color: var(--accent-cyan);
+      font-weight: 500;
+    }
+
+    /* Replace */
+    .lc-replace-label {
+      color: var(--text-muted);
+      display: inline-block;
+      width: 70px;
+    }
+
+    .lc-replace-val {
+      color: var(--accent-amber);
+      font-weight: 500;
+    }
+
+    /* Result */
+    .lc-result-label {
+      color: var(--text-muted);
+      display: inline-block;
+      width: 70px;
+    }
+
+    .lc-result-val {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .lc-result-highlight {
+      color: var(--accent-amber);
+      font-weight: 600;
+    }
+
+    /* Scenario cards */
+    .scenario-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 14px;
+    }
+
+    .scenario-title {
+      font-size: 13px;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    .scenario-flow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .sc-box {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-light);
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .sc-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+
+    .sc-val {
+      color: var(--text-primary);
+    }
+
+    .sc-val.fmt {
+      color: var(--accent-purple);
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .sc-val.find {
+      color: var(--accent-cyan);
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .sc-val.repl {
+      color: var(--accent-amber);
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .sc-val.out {
+      color: var(--accent-emerald);
+      font-weight: 600;
+    }
+
+    .sc-arrow {
+      color: var(--text-muted);
+      font-size: 16px;
+    }
+
+    .fr-action-wrap {
+      margin-top: 40px;
+    }
+
+    .fr-action-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      position: relative;
+      cursor: pointer;
+      transition: .2s;
+      min-height: 58px;
+    }
+
+    .fr-action-card:hover {
+      border-color: var(--border-light);
+      background: var(--bg-card);
+    }
+
+    .fr-action-card::after {
+      content: '+';
+      position: absolute;
+      right: 14px;
+      top: 14px;
+      font-size: 20px;
+      line-height: 1;
+      color: #8b8b96;
+      font-weight: 500;
+    }
+
+    .fr-action-card.active::after {
+      content: '−';
+    }
+
+    .fr-action-head {
+      padding-right: 26px;
+    }
+
+    .fr-action-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -.3px;
+      margin-bottom: 4px;
+    }
+
+    .fr-action-mini {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .fr-action-body {
+      display: none;
+      margin-top: 14px;
+    }
+
+    .fr-action-card.active .fr-action-body {
+      display: block;
+      animation: fmtReveal .15s ease;
+    }
+
+    .fr-action-desc {
+      color: var(--text-secondary);
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    @media(max-width: 900px) {
+      #findreplace .grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      #findreplace .grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      #findreplace .grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media(max-width: 600px) {
+
+      #findreplace .grid-4,
+      #findreplace .grid-3,
+      #findreplace .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <section id="findreplace" class="section">
+    <div class="container">
+
+      <!-- Block Header -->
+      <div class="block-header-fr section-block-header">
+        <div class="section-block-title">Find & Replace</div>
+        <div class="section-block-desc">
+          Change specific parts of the file name.<br>
+          <div class="highlight-box">
+            <strong>Find</strong> chooses the part of the name to modify. <strong>Replace</strong> determines how that
+            part is updated.<br>
+            <span style="color: var(--text-muted);"><i>Find old text → replaced → New filename</i></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group 1 -->
+      <div class="logic-group" data-group="text matching custom case sensitive">
+        <div class="logic-group-title">Group 1: Text Matching</div>
+        <div class="grid-2">
+          <div class="logic-card" data-keywords="custom text general swapping case insensitive">
+            <div class="logic-header">
+              <div class="logic-title">Custom Text</div>
+            </div>
+            <p class="logic-desc">Finds the exact word you type. It does not care about capital letters — searching for
+              'draft' will successfully find 'DRAFT'.</p>
+            <div class="logic-code" onclick="copyText('draft')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text">Invoice <span class="lc-highlight-find">Draft</span>.pdf</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">draft</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">Final</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">Invoice <span class="lc-result-highlight">Final</span>.pdf</span>
+              </span>
+            </div>
+          </div>
+          <div class="logic-card" data-keywords="custom text precise case sensitive edit asterisk">
+            <div class="logic-header">
+              <div class="logic-title">*Custom Text</div>
+            </div>
+            <p class="logic-desc">Finds the exact word, but capital letters MUST match perfectly. Searching for '*Final'
+              will not find 'final'.</p>
+            <div class="logic-code" onclick="copyText('*Final')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text">Invoice <span class="lc-highlight-find">Final</span>.pdf</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">*Final</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">Sent</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">Invoice <span class="lc-result-highlight">Sent</span>.pdf</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group 2 -->
+      <div class="logic-group" data-group="symbols spacing hyphen underscore space duplicate special characters">
+        <div class="logic-group-title">Group 2: Symbols & Spacing</div>
+        <div class="grid-3">
+          <div class="logic-card" data-keywords="hyphen dash kebab case remove clean space">
+            <div class="logic-header">
+              <div class="logic-title">- (Hyphen)</div>
+            </div>
+            <p class="logic-desc">Finds dashes (-). Good for removing them or changing them into clean spaces.</p>
+            <div class="logic-code" onclick="copyText('-')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text">Logo<span class="lc-highlight-find">-</span>v2<span
+                    class="lc-highlight-find">-</span>Final.png</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">-</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">Space</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">Logo <span class="lc-result-highlight"> </span>v2 <span
+                    class="lc-result-highlight"> </span>Final.png</span>
+              </span>
+            </div>
+          </div>
+          <div class="logic-card" data-keywords="underscore snake case clean space">
+            <div class="logic-header">
+              <div class="logic-title">_ (Underscore)</div>
+            </div>
+            <p class="logic-desc">Finds underscores (_). Good for changing them into spaces to make names easier to
+              read.</p>
+            <div class="logic-code" onclick="copyText('_')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text">Invoice<span class="lc-highlight-find">_</span>2024.pdf</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">_</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">-</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">Invoice<span class="lc-result-highlight">-</span>2024.pdf</span>
+              </span>
+            </div>
+          </div>
+          <div class="logic-card" data-keywords="space single web safe filename">
+            <div class="logic-header">
+              <div class="logic-title">space</div>
+            </div>
+            <p class="logic-desc">Finds single spaces. Good for converting them into dashes or underscores for web
+              uploads.</p>
+            <div class="logic-code" onclick="copyText('space')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text">My<span class="lc-highlight-find"> </span>Photo.jpg</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">space</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">_</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">My<span class="lc-result-highlight">_</span>Photo.jpg</span>
+              </span>
+            </div>
+          </div>
+          <div class="logic-card" data-keywords="duplicate space double triple fix accidental">
+            <div class="logic-header">
+              <div class="logic-title">Duplicate Space</div>
+            </div>
+            <p class="logic-desc">Finds mistakes where two or three spaces are accidentally typed together.</p>
+            <div class="logic-code" onclick="copyText('Duplicate Space')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text">Photo<span class="lc-highlight-find">&nbsp; </span>Album.jpg</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">Duplicate Space</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">Space</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">Photo<span class="lc-result-highlight"> </span>Album.jpg</span>
+              </span>
+            </div>
+          </div>
+          <div class="logic-card" data-keywords="special characters symbols sanitize chaotic @ # $ %">
+            <div class="logic-header">
+              <div class="logic-title">Special Characters</div>
+            </div>
+            <p class="logic-desc">Finds symbols like @, #, $, or %. Good for instantly cleaning up messy downloaded
+              names.</p>
+            <div class="logic-code" onclick="copyText('Special Characters')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text">Invoice<span class="lc-highlight-find">@</span><span
+                    class="lc-highlight-find">#</span>.pdf</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">Special Characters</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">[Leave Blank]</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">Invoice.pdf</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group 3 -->
+      <div class="logic-group" data-group="brackets parentheses round square curly copy tag category">
+        <div class="logic-group-title">Group 3: Brackets</div>
+        <div class="grid-4">
+          <div class="logic-card" data-keywords="inside parentheses round brackets copy tag delete">
+            <div class="logic-header">
+              <div class="logic-title">Inside ()</div>
+            </div>
+            <p class="logic-desc">Finds round brackets AND everything written inside them, treating them as one block.
+            </p>
+            <div class="logic-code" onclick="copyText('Inside ()')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text">Logo <span class="lc-highlight-find">(Draft)</span>.png</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">Inside ()</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">[Leave Blank]</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">Logo.png</span>
+              </span>
+            </div>
+          </div>
+          <div class="logic-card" data-keywords="inside square brackets category tag remove">
+            <div class="logic-header">
+              <div class="logic-title">Inside []</div>
+            </div>
+            <p class="logic-desc">Finds square brackets AND everything written inside them.</p>
+            <div class="logic-code" onclick="copyText('Inside []')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text">Report <span class="lc-highlight-find">[Final]</span>.pdf</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">Inside []</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">[Leave Blank]</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">Report.pdf</span>
+              </span>
+            </div>
+          </div>
+          <div class="logic-card" data-keywords="inside curly brackets system generated clean">
+            <div class="logic-header">
+              <div class="logic-title">Inside {}</div>
+            </div>
+            <p class="logic-desc">Finds curly brackets AND everything written inside them.</p>
+            <div class="logic-code" onclick="copyText('Inside {}')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text">Config <span class="lc-highlight-find">{v2}</span>.json</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">Inside {}</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">[Leave Blank]</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">Config.json</span>
+              </span>
+            </div>
+          </div>
+          <div class="logic-card" data-keywords="number parentheses windows duplicate ignore text">
+            <div class="logic-header">
+              <div class="logic-title">number ()</div>
+            </div>
+            <p class="logic-desc">Finds round brackets ONLY if there is a number inside. Safely ignores text like
+              (Draft).</p>
+            <div class="logic-code" onclick="copyText('number ()')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text">Photo <span class="lc-highlight-find">(25)</span>.jpg</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">number ()</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">[Leave Blank]</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">Photo.jpg</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group 4 -->
+      <div class="logic-group" data-group="position extraction first last word prefix suffix">
+        <div class="logic-group-title">Group 4: Position-Based Extraction</div>
+        <div class="grid-3">
+          <div class="logic-card" data-keywords="first word prefix remove consistent">
+            <div class="logic-header">
+              <div class="logic-title">First Word</div>
+            </div>
+            <p class="logic-desc">Finds the very first word in the name.</p>
+            <div class="logic-code" onclick="copyText('First Word')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text"><span class="lc-highlight-find">Invoice</span> 2024 Final.pdf</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">First Word</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">Receipt</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val"><span class="lc-result-highlight">Receipt</span> 2024 Final.pdf</span>
+              </span>
+            </div>
+          </div>
+          <div class="logic-card" data-keywords="last word suffix status marker swap">
+            <div class="logic-header">
+              <div class="logic-title">Last Word</div>
+            </div>
+            <p class="logic-desc">Finds the very last word before the file extension.</p>
+            <div class="logic-code" onclick="copyText('Last Word')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text">Invoice 2024 <span class="lc-highlight-find">Draft</span>.pdf</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">Last Word</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">Complete</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">Invoice 2024 <span class="lc-result-highlight">Complete</span>.pdf</span>
+              </span>
+            </div>
+          </div>
+          <div class="logic-card" data-keywords="first n words multiple prepend tag strip">
+            <div class="logic-header">
+              <div class="logic-title">First n Words</div>
+            </div>
+            <p class="logic-desc">Finds a specific number of words counting from the start.</p>
+            <div class="logic-code" onclick="copyText('First 2 words')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text"><span class="lc-highlight-find">Invoice 2024</span> Final.pdf</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">First 2 words</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">Document</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val"><span class="lc-result-highlight">Document</span> Final.pdf</span>
+              </span>
+            </div>
+          </div>
+          <div class="logic-card" data-keywords="last n words multiple appended tag erase">
+            <div class="logic-header">
+              <div class="logic-title">Last n Words</div>
+            </div>
+            <p class="logic-desc">Finds a specific number of words counting backwards from the end.</p>
+            <div class="logic-code" onclick="copyText('Last 2 words')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text">Project <span class="lc-highlight-find">2024 Final</span>.pdf</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">Last 2 words</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">Archive</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">Project <span class="lc-result-highlight">Archive</span>.pdf</span>
+              </span>
+            </div>
+          </div>
+          <div class="logic-card" data-keywords="nth word start middle date edit specific">
+            <div class="logic-header">
+              <div class="logic-title">Nth Word from Start</div>
+            </div>
+            <p class="logic-desc">Finds one specific word counting from the start.</p>
+            <div class="logic-code" onclick="copyText('3rd word from start')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text">Invoice 2024 <span class="lc-highlight-find">Final</span>
+                  Draft.pdf</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">3rd word</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">Review</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">Invoice 2024 <span class="lc-result-highlight">Review</span>
+                  Draft.pdf</span>
+              </span>
+            </div>
+          </div>
+          <div class="logic-card" data-keywords="nth word last status version change">
+            <div class="logic-header">
+              <div class="logic-title">Nth Word from Last</div>
+            </div>
+            <p class="logic-desc">Finds one specific word counting backwards from the end.</p>
+            <div class="logic-code" onclick="copyText('2nd word from last')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text">Invoice 2024 <span class="lc-highlight-find">Final</span>
+                  Draft.pdf</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">2nd word from last</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">Sent</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">Invoice 2024 <span class="lc-result-highlight">Sent</span> Draft.pdf</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group 5 -->
+      <div class="logic-group" data-group="anchor based search before after between text">
+        <div class="logic-group-title">Group 5: Anchor-Based Search</div>
+        <div class="grid-3">
+          <div class="logic-card" data-keywords="text before prefix client replace entire">
+            <div class="logic-header">
+              <div class="logic-title">Text before:</div>
+            </div>
+            <p class="logic-desc">Finds all the text before a specific word you choose, stopping exactly at that word.
+            </p>
+            <div class="logic-code" onclick="copyText('Text before: design')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text"><span class="lc-highlight-find">Inv 2024 Final </span>Design.pdf</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">Text before: design</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">Client</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val"><span class="lc-result-highlight">Client</span> Design.pdf</span>
+              </span>
+            </div>
+          </div>
+          <div class="logic-card" data-keywords="text after suffix wipe messy trail">
+            <div class="logic-header">
+              <div class="logic-title">Text after:</div>
+            </div>
+            <p class="logic-desc">Finds all the text after a specific word you choose, stopping at the file extension.
+            </p>
+            <div class="logic-code" onclick="copyText('Text after: invoice')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text">Invoice<span class="lc-highlight-find"> 2024 Final</span>.pdf</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">Text after: invoice</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">Sent</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">Invoice <span class="lc-result-highlight">Sent</span>.pdf</span>
+              </span>
+            </div>
+          </div>
+          <div class="logic-card" data-keywords="text between surgical middle string extraction trapped">
+            <div class="logic-header">
+              <div class="logic-title">Text between:</div>
+            </div>
+            <p class="logic-desc">Finds the text trapped between two specific anchor words you set.</p>
+            <div class="logic-code" onclick="copyText('Text between: invoice, draft')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text">Invoice <span class="lc-highlight-find">2024 Final</span>
+                  Draft.pdf</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">between: invoice, draft</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">Sent</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">Invoice <span class="lc-result-highlight">Sent</span> Draft.pdf</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group 6 -->
+      <div class="logic-group" data-group="multiple selectors comma bulk deletion efficient">
+        <div class="logic-group-title">Group 6: Multiple Selectors</div>
+        <div class="grid-2">
+          <div class="logic-card" data-keywords="item comma multiple same time efficient bulk">
+            <div class="logic-header">
+              <div class="logic-title">Item1, Item2, Item3</div>
+            </div>
+            <p class="logic-desc">Finds multiple things at the same time. Just put a comma between them.</p>
+            <div class="logic-code" onclick="copyText('draft, -, /')">
+              <span class="lc-row">
+                <span class="lc-filename-label">File name:</span>
+                <span class="lc-filename-text"><span class="lc-highlight-find">Draft</span> <span
+                    class="lc-highlight-find">-</span> Final <span class="lc-highlight-find">/</span> Backup.pdf</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">draft, -, /</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">[Leave Blank]</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">Final Backup.pdf</span>
+              </span>
+            </div>
+          </div>
+          <div class="logic-card" style="border-color:var(--accent-cyan)"
+            data-keywords="pro tip multi find strategy comma clean garbage">
+            <div class="logic-header">
+              <div class="logic-title" style="color:var(--accent-cyan)">Pro Tip: Multi-Find Strategy</div>
+            </div>
+            <p class="logic-desc">Use commas to clean up messy filenames in one single pass. Find all the garbage chunks
+              at once and leave Replace blank to delete them all seamlessly.</p>
+            <div class="logic-code" style="background:rgba(34,211,238,.05);border-color:rgba(34,211,238,.2)">
+              <span class="lc-row" style="margin-bottom:6px">
+                <span class="lc-find-label">Find:</span>
+                <span class="lc-find-val">draft, copy, (1), -, _</span>
+              </span>
+              <span class="lc-row" style="margin-bottom:6px">
+                <span class="lc-replace-label">Replace:</span>
+                <span class="lc-replace-val">[Leave Blank]</span>
+              </span>
+              <span class="lc-row">
+                <span class="lc-result-label">Result:</span>
+                <span class="lc-result-val">Photo.jpg (clean!)</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Find + Replace in Action -->
+      <div class="fr-action-wrap">
+        <div class="fr-action-card" id="frActionCard">
+          <div class="fr-action-head">
+            <div>
+              <div class="fr-action-title">Find + Replace in Action</div>
+              <div class="fr-action-mini">Real examples showing how Format, Find, and Replace work together</div>
+            </div>
+          </div>
+          <div class="fr-action-body">
+            <p class="fr-action-desc">
+              This block stays collapsed by default so the page stays cleaner. Open it to see step-by-step examples.
+              Each scenario below is a separate example, not one single group.
+            </p>
+            <div>
+              <div class="scenario-card">
+                <div class="scenario-title">Scenario 1: Change "Draft" to "Final"</div>
+                <div class="scenario-flow">
+                  <div class="sc-box"><span class="sc-label">Original</span><span class="sc-val">Invoice
+                      Draft.pdf</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Format</span><span class="sc-val fmt"
+                      onclick="copyText('{original}')">{original}</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Find</span><span class="sc-val find"
+                      onclick="copyText('Draft')">Draft</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Replace</span><span class="sc-val repl"
+                      onclick="copyText('Final')">Final</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Output</span><span class="sc-val out">Invoice
+                      Final.pdf</span></div>
+                </div>
+              </div>
+
+              <div class="scenario-card">
+                <div class="scenario-title">Scenario 2: Replace underscores with clean spaces</div>
+                <div class="scenario-flow">
+                  <div class="sc-box"><span class="sc-label">Original</span><span
+                      class="sc-val">Travel_Photo_Album.jpg</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Format</span><span class="sc-val fmt"
+                      onclick="copyText('{original}')">{original}</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Find</span><span class="sc-val find"
+                      onclick="copyText('_')">_</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Replace</span><span class="sc-val repl"
+                      onclick="copyText('Space')">[Space]</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Output</span><span class="sc-val out">Travel Photo
+                      Album.jpg</span></div>
+                </div>
+              </div>
+
+              <div class="scenario-card">
+                <div class="scenario-title">Scenario 3: Remove text inside round brackets</div>
+                <div class="scenario-flow">
+                  <div class="sc-box"><span class="sc-label">Original</span><span class="sc-val">Poster (Old
+                      Version).pdf</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Format</span><span class="sc-val fmt"
+                      onclick="copyText('{original}')">{original}</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Find</span><span class="sc-val find"
+                      onclick="copyText('Inside ()')">Inside ()</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Replace</span><span class="sc-val repl"
+                      onclick="copyText('')">[Blank]</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Output</span><span class="sc-val out">Poster.pdf</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="scenario-card">
+                <div class="scenario-title">Scenario 4: Keep a clean prefix and remove the messy original part</div>
+                <div class="scenario-flow">
+                  <div class="sc-box"><span class="sc-label">Original</span><span class="sc-val">CAM_8932_RAW.jpg</span>
+                  </div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Format</span><span class="sc-val fmt"
+                      onclick="copyText('Trip Photo_{original}')">Trip Photo_{original}</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Find</span><span class="sc-val find"
+                      onclick="copyText('CAM_8932_RAW')">CAM_8932_RAW</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Replace</span><span class="sc-val repl"
+                      onclick="copyText('')">[Blank]</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Output</span><span class="sc-val out">Trip
+                      Photo_01.jpg</span></div>
+                </div>
+              </div>
+
+              <div class="scenario-card">
+                <div class="scenario-title">Scenario 5: Remove duplicate numbering brackets</div>
+                <div class="scenario-flow">
+                  <div class="sc-box"><span class="sc-label">Original</span><span class="sc-val">Report Copy
+                      (2).docx</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Format</span><span class="sc-val fmt"
+                      onclick="copyText('{original}')">{original}</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Find</span><span class="sc-val find"
+                      onclick="copyText('number ()')">number ()</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Replace</span><span class="sc-val repl"
+                      onclick="copyText('')">[Blank]</span></div>
+                  <div class="sc-arrow">→</div>
+                  <div class="sc-box"><span class="sc-label">Output</span><span class="sc-val out">Report
+                      Copy.docx</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+  <div class="divider"></div>
+
+  <!-- ═══════════════════════════════════════════════════
+        IF THEN
+  ════════════════════════════════════════════════════ -->
+  <style>
+    .block-header-ifthen {
+      background: rgba(251, 191, 36, .05);
+      border: 1px solid rgba(251, 191, 36, .15);
+      border-left: 3px solid var(--accent-amber);
+    }
+
+    .block-header-ifthen .section-block-title {
+      color: var(--accent-amber);
+    }
+
+    .if-subheader {
+      margin: 0 0 20px;
+    }
+
+    .if-subheader h3 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -.3px;
+      margin-bottom: 6px;
+    }
+
+    .if-subheader p {
+      color: var(--text-secondary);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .if-grid,
+    .then-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      align-items: start;
+    }
+
+    .if-card,
+    .then-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      position: relative;
+      cursor: pointer;
+      transition: .2s;
+      min-height: 62px;
+    }
+
+    .if-card:hover,
+    .then-card:hover {
+      background: var(--bg-card);
+      border-color: var(--border-light);
+    }
+
+    .if-card::after,
+    .then-card::after {
+      content: '+';
+      position: absolute;
+      right: 14px;
+      top: 14px;
+      font-size: 20px;
+      line-height: 1;
+      color: #8b8b96;
+      font-weight: 500;
+    }
+
+    .if-card.active::after,
+    .then-card.active::after {
+      content: '−';
+    }
+
+    .if-card.active,
+    .then-card.active {
+      grid-column: 1 / -1;
+    }
+
+    .if-card-head,
+    .then-card-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding-right: 20px;
+      margin-bottom: 0;
+    }
+
+    .if-card.active .if-card-head,
+    .then-card.active .then-card-head {
+      margin-bottom: 12px;
+    }
+
+    .if-chip,
+    .then-chip {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      padding: 4px 8px;
+      border-radius: 100px;
+      white-space: nowrap;
+    }
+
+    .if-chip {
+      background: rgba(251, 191, 36, .1);
+      color: var(--accent-amber);
+      border: 1px solid rgba(251, 191, 36, .2);
+    }
+
+    .then-chip {
+      background: rgba(52, 211, 153, .1);
+      color: var(--accent-emerald);
+      border: 1px solid rgba(52, 211, 153, .2);
+    }
+
+    .if-title,
+    .then-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .if-mini,
+    .then-mini {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    .if-card-body,
+    .then-card-body {
+      display: none;
+    }
+
+    .if-card.active .if-card-body,
+    .then-card.active .then-card-body {
+      display: block;
+      animation: fmtReveal .15s ease;
+    }
+
+    .if-desc,
+    .then-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .if-layout,
+    .then-layout {
+      display: grid;
+      grid-template-columns: 1.15fr .9fr .95fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .if-file-list,
+    .then-example-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .if-file-line,
+    .then-example-line {
+      color: var(--text-primary);
+      word-break: break-word;
+    }
+
+    .if-hit {
+      color: var(--accent-amber);
+      font-weight: 700;
+    }
+
+    .if-exclude {
+      color: var(--accent-rose);
+      font-weight: 700;
+    }
+
+    .if-select {
+      color: var(--accent-emerald);
+      font-weight: 700;
+    }
+
+    .if-dim {
+      color: var(--text-muted);
+    }
+
+    .if-rule-box,
+    .then-rule-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .rule-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(251, 191, 36, .08);
+      border: 1px solid rgba(251, 191, 36, .18);
+      color: var(--accent-amber);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .rule-pill.green {
+      background: rgba(52, 211, 153, .08);
+      border-color: rgba(52, 211, 153, .18);
+      color: var(--accent-emerald);
+    }
+
+    .rule-note {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .if-note,
+    .then-note {
+      margin-top: 14px;
+      background: rgba(251, 191, 36, .05);
+      border-left: 2px solid var(--accent-amber);
+      padding: 10px 12px;
+      border-radius: 0 4px 4px 0;
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .then-note {
+      background: rgba(52, 211, 153, .05);
+      border-left-color: var(--accent-emerald);
+    }
+
+    .if-note strong,
+    .then-note strong {
+      color: var(--text-primary);
+    }
+
+    @media (max-width: 1024px) {
+
+      .if-grid,
+      .then-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .if-layout,
+      .then-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 700px) {
+
+      .if-grid,
+      .then-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <section id="ifthen" class="section">
+    <div class="container">
+      <div class="block-header-ifthen section-block-header">
+        <div class="section-block-title">IF THEN</div>
+        <div class="section-block-desc">
+          Choose which files should be selected and what should happen to them.<br>
+          <div class="highlight-box">
+            <strong>IF</strong> selects the matching files. <strong>THEN</strong> decides the action applied to those
+            files.
+          </div>
+        </div>
+      </div>
+
+      <div class="if-subheader">
+        <h3>IF Logic</h3>
+        <p>These rules decide which files get selected first. Open any card to see easy examples, exactly what part is
+          matched, and what Renom will include or ignore.</p>
+      </div>
+
+      <div class="if-grid">
+
+        <div class="if-card">
+          <div class="if-card-head"><span class="if-chip">IF</span>
+            <div>
+              <div class="if-title">Any File Type(s)</div>
+              <div class="if-mini">Use , to match any file type from your list.</div>
+            </div>
+          </div>
+          <div class="if-card-body">
+            <p class="if-desc">If a file has one of those extensions, it can be selected. No need for all of them to
+              exist together.</p>
+            <div class="if-layout">
+              <div class="panel-box">
+                <div class="panel-title">Example Filenames</div>
+                <div class="if-file-list">
+                  <div class="if-file-line">logo design.<span class="if-hit">eps</span></div>
+                  <div class="if-file-line">banner.<span class="if-hit">jpg</span></div>
+                  <div class="if-file-line">notes.<span class="if-dim">txt</span></div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Type in IF</div>
+                <div class="if-rule-box">
+                  <div class="rule-pill">jpg, png, eps</div>
+                  <div class="rule-note">Easy way to remember:<br><b>,</b> means this OR that OR that</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Renom Selects</div>
+                <div class="if-file-list">
+                  <div class="if-file-line"><span class="if-select">Selected:</span> logo design.eps</div>
+                  <div class="if-file-line"><span class="if-select">Selected:</span> banner.jpg</div>
+                  <div class="if-file-line"><span class="if-dim">Ignored:</span> notes.txt</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="if-card">
+          <div class="if-card-head"><span class="if-chip">IF</span>
+            <div>
+              <div class="if-title">All Common File Types</div>
+              <div class="if-mini">Use + to require multiple file types in the same name group.</div>
+            </div>
+          </div>
+          <div class="if-card-body">
+            <p class="if-desc">Renom will only select the group if all of those file types exist together. If even one
+              of them is missing, that group will be skipped.</p>
+            <div class="if-layout">
+              <div class="panel-box">
+                <div class="panel-title">Example Filenames</div>
+                <div class="if-file-list">
+                  <span class="if-dim" style="font-size: 10px; margin-bottom: 2px;">GROUP 1 (Complete)</span>
+                  <div class="if-file-line">logo design 1.<span class="if-hit">eps</span></div>
+                  <div class="if-file-line">logo design 1.<span class="if-hit">jpg</span></div>
+                  <div class="if-file-line">logo design 1.<span class="if-hit">png</span></div>
+                  <span class="if-dim" style="font-size: 10px; margin-top: 6px; margin-bottom: 2px;">GROUP 2 (Missing
+                    .png)</span>
+                  <div class="if-file-line">logo design 2.<span class="if-dim">eps</span></div>
+                  <div class="if-file-line">logo design 2.<span class="if-dim">jpg</span></div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Type in IF</div>
+                <div class="if-rule-box">
+                  <div class="rule-pill">eps+jpg+png</div>
+                  <div class="rule-note">Easy way to remember:<br><b>+</b> means all of these together</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Renom Selects</div>
+                <div class="if-file-list">
+                  <div class="if-file-line"><span class="if-select">Group 1:</span> Selected</div>
+                  <div class="if-file-line"><span class="if-dim">Group 2:</span> Skipped entirely</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="if-card">
+          <div class="if-card-head"><span class="if-chip">IF</span>
+            <div>
+              <div class="if-title">Exclude from Common</div>
+              <div class="if-mini">First check the full set exists, then ignore what you do not want.</div>
+            </div>
+          </div>
+          <div class="if-card-body">
+            <p class="if-desc">The group must contain all required files (like .eps, .jpg, and .png), but Renom will
+              skip the one you minus (like .jpg). Only the remaining matching files will be processed.</p>
+            <div class="if-layout">
+              <div class="panel-box">
+                <div class="panel-title">Example Filenames</div>
+                <div class="if-file-list">
+                  <div class="if-file-line">logo design 1.<span class="if-hit">eps</span></div>
+                  <div class="if-file-line">logo design 1.<span class="if-exclude">jpg</span></div>
+                  <div class="if-file-line">logo design 1.<span class="if-hit">png</span></div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Type in IF</div>
+                <div class="if-rule-box">
+                  <div class="rule-pill">eps+jpg+png-jpg</div>
+                  <div class="rule-note">Easy way to remember:<br>Build the full set first, then remove what you do not
+                    want</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Renom Selects</div>
+                <div class="if-file-list">
+                  <div class="if-file-line"><span class="if-select">Selected:</span> logo design 1.eps</div>
+                  <div class="if-file-line"><span class="if-select">Selected:</span> logo design 1.png</div>
+                  <div class="if-file-line"><span class="if-exclude">Skipped:</span> logo design 1.jpg</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="if-card">
+          <div class="if-card-head"><span class="if-chip">IF</span>
+            <div>
+              <div class="if-title">Containing Custom Text</div>
+              <div class="if-mini">Select files whose name contains your typed word anywhere</div>
+            </div>
+          </div>
+          <div class="if-card-body">
+            <p class="if-desc">This rule checks the filename itself, not the extension set. It looks inside the name and
+              selects files that contain your text anywhere in the stem. The current code compares in lowercase, so it
+              is case-insensitive. That means <b>logo</b>, <b>Logo</b>, and <b>LOGO</b> are treated the same for
+              matching.</p>
+            <div class="if-layout">
+              <div class="panel-box">
+                <div class="panel-title">Example Filenames</div>
+                <div class="if-file-list">
+                  <div class="if-file-line"><span class="if-hit">Logo</span> Concept.ai</div>
+                  <div class="if-file-line">Client <span class="if-hit">Logo</span> Final.pdf</div>
+                  <div class="if-file-line">Brand <span class="if-hit">logo</span> preview.jpg</div>
+                  <div class="if-file-line">Invoice March.pdf</div>
+                  <div class="if-file-line">Poster Design.png</div>
+                  <div class="if-file-line">Meeting Notes.txt</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Type in IF</div>
+                <div class="if-rule-box">
+                  <div class="rule-pill">logo</div>
+                  <div class="rule-note">Renom will select files whose name contains this word anywhere.</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Renom Selects</div>
+                <div class="if-file-list">
+                  <div class="if-file-line"><span class="if-select">Selected:</span> Logo Concept.ai</div>
+                  <div class="if-file-line"><span class="if-select">Selected:</span> Client Logo Final.pdf</div>
+                  <div class="if-file-line"><span class="if-select">Selected:</span> Brand logo preview.jpg</div>
+                  <div class="if-file-line"><span class="if-dim">Ignored:</span> Invoice March.pdf</div>
+                  <div class="if-file-line"><span class="if-dim">Ignored:</span> Poster Design.png</div>
+                  <div class="if-file-line"><span class="if-dim">Ignored:</span> Meeting Notes.txt</div>
+                </div>
+              </div>
+            </div>
+            <div class="if-note"><strong>Simple meaning:</strong> pick files whose names contain this keyword.</div>
+          </div>
+        </div>
+
+        <div class="if-card">
+          <div class="if-card-head"><span class="if-chip">IF</span>
+            <div>
+              <div class="if-title">Prefix</div>
+              <div class="if-mini">Select files whose names start with your typed text.</div>
+            </div>
+          </div>
+          <div class="if-card-body">
+            <p class="if-desc">Prefix checks only the beginning of the filename stem. If the name starts with the text
+              you type, it is selected. The code checks in lowercase, so this rule is not sensitive to letter case.</p>
+            <div class="if-layout">
+              <div class="panel-box">
+                <div class="panel-title">Example Filenames</div>
+                <div class="if-file-list">
+                  <div class="if-file-line"><span class="if-hit">IMG_</span>001.jpg</div>
+                  <div class="if-file-line"><span class="if-hit">IMG_</span>Cover.png</div>
+                  <div class="if-file-line">My_<span class="if-dim">IMG_</span>001.jpg</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Type in IF</div>
+                <div class="if-rule-box">
+                  <div class="rule-pill">IMG_</div>
+                  <div class="rule-note">Only the very beginning of the name is checked.</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Renom Selects</div>
+                <div class="if-file-list">
+                  <div class="if-file-line"><span class="if-select">Matches:</span> IMG_001.jpg</div>
+                  <div class="if-file-line"><span class="if-select">Matches:</span> IMG_Cover.png</div>
+                  <div class="if-file-line"><span class="if-dim">Does not match:</span> My_IMG_001.jpg</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="if-card">
+          <div class="if-card-head"><span class="if-chip">IF</span>
+            <div>
+              <div class="if-title">Suffix</div>
+              <div class="if-mini">Select files whose names end with your typed text</div>
+            </div>
+          </div>
+          <div class="if-card-body">
+            <p class="if-desc">Suffix checks only the end of the filename stem, just before the extension. If the name
+              ends with your typed text, the file is selected. If that text appears in the middle or at the beginning,
+              it does not count as a suffix match.</p>
+            <div class="if-layout">
+              <div class="panel-box">
+                <div class="panel-title">Example Filenames</div>
+                <div class="if-file-list">
+                  <div class="if-file-line">Poster <span class="if-hit">Final</span>.pdf</div>
+                  <div class="if-file-line">Logo Black <span class="if-hit">Final</span>.ai</div>
+                  <div class="if-file-line">Billboard <span class="if-hit">Final</span>.jpg</div>
+                  <div class="if-file-line"><span class="if-dim">Final</span> Poster Mockup.png</div>
+                  <div class="if-file-line">Final Delivery Notes.txt</div>
+                  <div class="if-file-line">Poster Final Backup.psd</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Type in IF</div>
+                <div class="if-rule-box">
+                  <div class="rule-pill">Final</div>
+                  <div class="rule-note">The word must be at the end of the filename stem to match.</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Renom Selects</div>
+                <div class="if-file-list">
+                  <div class="if-file-line"><span class="if-select">Selected:</span> Poster Final.pdf</div>
+                  <div class="if-file-line"><span class="if-select">Selected:</span> Logo Black Final.ai</div>
+                  <div class="if-file-line"><span class="if-select">Selected:</span> Billboard Final.jpg</div>
+                  <div class="if-file-line"><span class="if-dim">Ignored:</span> Final Poster Mockup.png</div>
+                  <div class="if-file-line"><span class="if-dim">Ignored:</span> Final Delivery Notes.txt</div>
+                  <div class="if-file-line"><span class="if-dim">Ignored:</span> Poster Final Backup.psd</div>
+                </div>
+              </div>
+            </div>
+            <div class="if-note"><strong>Simple meaning:</strong> pick files that end with this text.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="if-subheader" style="margin-top:40px;">
+        <h3>THEN Actions</h3>
+        <p>After IF selects the files, THEN decides what Renom will do. Open each card to see what happens in plain
+          language and with clear examples.</p>
+      </div>
+
+      <div class="then-grid">
+        <div class="then-card">
+          <div class="then-card-head"><span class="then-chip">THEN</span>
+            <div>
+              <div class="then-title">Rename</div>
+              <div class="then-mini">Build a new filename and keep the file in the current location</div>
+            </div>
+          </div>
+          <div class="then-card-body">
+            <p class="then-desc">Rename changes only the name. The file stays in the same folder. Renom first builds the
+              new name from File Name Format, Find, Replace, numbering, date/time tokens, and case conversion. Then it
+              renames the file in place.</p>
+            <div class="then-layout">
+              <div class="panel-box">
+                <div class="panel-title">Examples</div>
+                <div class="then-example-list">
+                  <div class="then-example-line">Report Draft.pdf → Report Final.pdf</div>
+                  <div class="then-example-line">IMG_0021.jpg → Trip Photo 01.jpg</div>
+                  <div class="then-example-line">Logo.ai → Client Logo.ai</div>
+                  <div class="then-example-line">Backup.zip → Backup 30-03-2026.zip</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Happens</div>
+                <div class="then-rule-box">
+                  <div class="rule-pill green">Name changes only</div>
+                  <div class="rule-note">Folder location stays the same. Only the filename is updated.</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Easy idea</div>
+                <div class="then-rule-box">
+                  <div class="rule-note">Use this when you simply want cleaner or more useful names.</div>
+                </div>
+              </div>
+            </div>
+            <div class="then-note"><strong>Remember:</strong> if the file name would become the same as before, Renom
+              may leave it unchanged.</div>
+          </div>
+        </div>
+
+        <div class="then-card">
+          <div class="then-card-head"><span class="then-chip">THEN</span>
+            <div>
+              <div class="then-title">Delete</div>
+              <div class="then-mini">Permanently remove the selected files</div>
+            </div>
+          </div>
+          <div class="then-card-body">
+            <p class="then-desc">Delete removes the selected files completely. This is not a rename. It is not a move to
+              another folder. In the current app logic, delete is treated as permanent and it is not fully undoable.</p>
+            <div class="then-layout">
+              <div class="panel-box">
+                <div class="panel-title">Examples</div>
+                <div class="then-example-list">
+                  <div class="then-example-line">draft_logo.jpg → deleted</div>
+                  <div class="then-example-line">temp_note.txt → deleted</div>
+                  <div class="then-example-line">old_mockup.png → deleted</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Happens</div>
+                <div class="then-rule-box">
+                  <div class="rule-pill green">Permanent remove</div>
+                  <div class="rule-note">Selected files are deleted from disk after confirmation.</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Easy idea</div>
+                <div class="then-rule-box">
+                  <div class="rule-note">Use only when you are sure those files are no longer needed.</div>
+                </div>
+              </div>
+            </div>
+            <div class="then-note"><strong>Important:</strong> this action is destructive.</div>
+          </div>
+        </div>
+
+        <div class="then-card">
+          <div class="then-card-head"><span class="then-chip">THEN</span>
+            <div>
+              <div class="then-title">Delete Text</div>
+              <div class="then-mini">Remove specific text from the filename only</div>
+            </div>
+          </div>
+          <div class="then-card-body">
+            <p class="then-desc">Delete Text does not delete the file. It deletes text from the filename. The app tries
+              to use the IF text first when appropriate, otherwise it can use Find text. After removing that text, it
+              cleans extra separators and spaces, then renames the file.</p>
+            <div class="then-layout">
+              <div class="panel-box">
+                <div class="panel-title">Examples</div>
+                <div class="then-example-list">
+                  <div class="then-example-line">Invoice DRAFT.pdf → Invoice.pdf</div>
+                  <div class="then-example-line">Logo Copy.ai → Logo.ai</div>
+                  <div class="then-example-line">Trip RAW Photo.jpg → Trip Photo.jpg</div>
+                  <div class="then-example-line">Poster FINAL FINAL.png → Poster.png</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Happens</div>
+                <div class="then-rule-box">
+                  <div class="rule-pill green">Text removed</div>
+                  <div class="rule-note">Only the typed text is removed from the filename. The file itself stays.</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Easy idea</div>
+                <div class="then-rule-box">
+                  <div class="rule-note">Useful for deleting words like draft, copy, temp, final, old, test, or raw from
+                    names.</div>
+                </div>
+              </div>
+            </div>
+            <div class="then-note"><strong>Simple difference:</strong> Delete removes the file. Delete Text removes text
+              from the filename.</div>
+          </div>
+        </div>
+
+        <div class="then-card">
+          <div class="then-card-head"><span class="then-chip">THEN</span>
+            <div>
+              <div class="then-title">Only Keep These File Types</div>
+              <div class="then-mini">Keep only the requested file types and delete the rest</div>
+            </div>
+          </div>
+          <div class="then-card-body">
+            <p class="then-desc">This action works with file-type style IF input. Renom reads the extension list, keeps
+              matching files, and deletes the rest. So it acts like a cleanup filter for mixed folders.</p>
+            <div class="then-layout">
+              <div class="panel-box">
+                <div class="panel-title">Examples</div>
+                <div class="then-example-list">
+                  <div class="then-example-line">Keep: jpg, png → remove ai, pdf, txt</div>
+                  <div class="then-example-line">Keep: eps+pdf → remove jpg, svg, docx</div>
+                  <div class="then-example-line">Keep: mp4 → remove mov, wav, txt</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Happens</div>
+                <div class="then-rule-box">
+                  <div class="rule-pill green">Keep selected types only</div>
+                  <div class="rule-note">Matching files remain. Non-matching files are deleted after confirmation.</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Easy idea</div>
+                <div class="then-rule-box">
+                  <div class="rule-note">Useful when you want only the wanted output types left.</div>
+                </div>
+              </div>
+            </div>
+            <div class="then-note"><strong>Important:</strong> the non-matching files are deleted, not moved aside.
+            </div>
+          </div>
+        </div>
+
+        <div class="then-card">
+          <div class="then-card-head"><span class="then-chip">THEN</span>
+            <div>
+              <div class="then-title">Copy</div>
+              <div class="then-mini">Copy selected files to another folder without renaming them</div>
+            </div>
+          </div>
+          <div class="then-card-body">
+            <p class="then-desc">Copy creates a duplicate in the destination folder. In the current code, plain Copy
+              keeps the original filename. It does not apply the new formatted name. This is why Copy is different from
+              Rename & Copy.</p>
+            <div class="then-layout">
+              <div class="panel-box">
+                <div class="panel-title">Examples</div>
+                <div class="then-example-list">
+                  <div class="then-example-line">Logo.ai → Archive/Logo.ai</div>
+                  <div class="then-example-line">Cover.jpg → Delivery/Cover.jpg</div>
+                  <div class="then-example-line">Invoice.pdf → Backup/Invoice.pdf</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Happens</div>
+                <div class="then-rule-box">
+                  <div class="rule-pill green">Duplicate created</div>
+                  <div class="rule-note">Original stays where it is. A copy is created in the chosen destination folder.
+                  </div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Easy idea</div>
+                <div class="then-rule-box">
+                  <div class="rule-note">Use this when you need another copy but want to keep the original file exactly
+                    as it is.</div>
+                </div>
+              </div>
+            </div>
+            <div class="then-note"><strong>Important:</strong> plain Copy does not rename in your app logic.</div>
+          </div>
+        </div>
+
+        <div class="then-card">
+          <div class="then-card-head"><span class="then-chip">THEN</span>
+            <div>
+              <div class="then-title">Move</div>
+              <div class="then-mini">Move selected files to another folder without renaming them</div>
+            </div>
+          </div>
+          <div class="then-card-body">
+            <p class="then-desc">Move sends the selected file to a destination folder. In the current code, plain Move
+              keeps the old filename. The source folder no longer keeps that file because it has been moved away.</p>
+            <div class="then-layout">
+              <div class="panel-box">
+                <div class="panel-title">Examples</div>
+                <div class="then-example-list">
+                  <div class="then-example-line">Logo.ai → Done/Logo.ai</div>
+                  <div class="then-example-line">Mockup.jpg → Review/Mockup.jpg</div>
+                  <div class="then-example-line">Invoice.pdf → Sent/Invoice.pdf</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Happens</div>
+                <div class="then-rule-box">
+                  <div class="rule-pill green">Location changes only</div>
+                  <div class="rule-note">The file is removed from the old folder and placed into the destination folder.
+                  </div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Easy idea</div>
+                <div class="then-rule-box">
+                  <div class="rule-note">Use this when the file name is already fine and only the folder should change.
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="then-note"><strong>Important:</strong> plain Move does not rename in your app logic.</div>
+          </div>
+        </div>
+
+        <div class="then-card">
+          <div class="then-card-head"><span class="then-chip">THEN</span>
+            <div>
+              <div class="then-title">Rename & Copy</div>
+              <div class="then-mini">Copy to another folder using the new formatted name</div>
+            </div>
+          </div>
+          <div class="then-card-body">
+            <p class="then-desc">This action first builds the new filename from your format and find/replace logic, then
+              copies the file to the destination folder using that new name. The original file remains in place with its
+              current name.</p>
+            <div class="then-layout">
+              <div class="panel-box">
+                <div class="panel-title">Examples</div>
+                <div class="then-example-list">
+                  <div class="then-example-line">IMG_0012.jpg → Delivery/Trip Photo 01.jpg</div>
+                  <div class="then-example-line">draft_logo.ai → Archive/Logo Final.ai</div>
+                  <div class="then-example-line">Audio.wav → Sessions/Session 14-30-52 01.wav</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Happens</div>
+                <div class="then-rule-box">
+                  <div class="rule-pill green">Copy + new name</div>
+                  <div class="rule-note">The original file stays. The copied file gets the newly formatted name.</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Easy idea</div>
+                <div class="then-rule-box">
+                  <div class="rule-note">Use this when you want a delivered copy with a clean name but also want to keep
+                    your original untouched.</div>
+                </div>
+              </div>
+            </div>
+            <div class="then-note"><strong>Difference from Copy:</strong> this one copies with the new formatted name.
+            </div>
+          </div>
+        </div>
+
+        <div class="then-card">
+          <div class="then-card-head"><span class="then-chip">THEN</span>
+            <div>
+              <div class="then-title">Rename & Move</div>
+              <div class="then-mini">Move to another folder using the new formatted name</div>
+            </div>
+          </div>
+          <div class="then-card-body">
+            <p class="then-desc">Rename & Move first builds the new filename, then moves the file to the chosen
+              destination folder with that new name. So both the location and the filename change together.</p>
+            <div class="then-layout">
+              <div class="panel-box">
+                <div class="panel-title">Examples</div>
+                <div class="then-example-list">
+                  <div class="then-example-line">IMG_0043.jpg → Final Selects/Trip 01.jpg</div>
+                  <div class="then-example-line">draft_menu.pdf → Approved/Menu Final.pdf</div>
+                  <div class="then-example-line">Logo Concept.ai → Client Files/Client Logo.ai</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Happens</div>
+                <div class="then-rule-box">
+                  <div class="rule-pill green">Move + new name</div>
+                  <div class="rule-note">The source folder loses the file. The destination folder receives the file with
+                    its new formatted name.</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Easy idea</div>
+                <div class="then-rule-box">
+                  <div class="rule-note">Use this when you want the file fully finished and placed into its final folder
+                    in one step.</div>
+                </div>
+              </div>
+            </div>
+            <div class="then-note"><strong>Difference from Move:</strong> this one also renames while moving.</div>
+          </div>
+        </div>
+
+        <div class="then-card">
+          <div class="then-card-head"><span class="then-chip">THEN</span>
+            <div>
+              <div class="then-title">Create Group Folder</div>
+              <div class="then-mini">Make one folder for the selected group and move matching files into it</div>
+            </div>
+          </div>
+          <div class="then-card-body">
+            <p class="then-desc">This action works with the group-based IF rules. Renom creates one destination folder
+              for the matched group, then moves the selected files into that folder. It can also rename the moved files
+              according to the current formatting logic.</p>
+            <div class="then-layout">
+              <div class="panel-box">
+                <div class="panel-title">Examples</div>
+                <div class="then-example-list">
+                  <div class="then-example-line">Logo.eps + Logo.jpg + Logo.pdf → folder "Logo"</div>
+                  <div class="then-example-line">Poster.ai + Poster.jpg → folder "Poster"</div>
+                  <div class="then-example-line">BrandKit.eps + BrandKit.pdf → folder "BrandKit"</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Happens</div>
+                <div class="then-rule-box">
+                  <div class="rule-pill green">One folder per matched group</div>
+                  <div class="rule-note">Renom creates the folder in the chosen destination and moves the selected group
+                    files into it.</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Easy idea</div>
+                <div class="then-rule-box">
+                  <div class="rule-note">Useful when related files should live together in one folder.</div>
+                </div>
+              </div>
+            </div>
+            <div class="then-note"><strong>Important:</strong> this is intended for group-style IF logic such as All
+              Common File Types or Exclude from Common.</div>
+          </div>
+        </div>
+
+        <div class="then-card">
+          <div class="then-card-head"><span class="then-chip">THEN</span>
+            <div>
+              <div class="then-title">Zip</div>
+              <div class="then-mini">Create one zip archive and remove the originals</div>
+            </div>
+          </div>
+          <div class="then-card-body">
+            <p class="then-desc">Zip gathers the selected files and packs them into one zip file. In the current app
+              logic, the originals are then deleted after the zip is created successfully. The zip file is usually named
+              from the group stem.</p>
+            <div class="then-layout">
+              <div class="panel-box">
+                <div class="panel-title">Examples</div>
+                <div class="then-example-list">
+                  <div class="then-example-line">Logo.eps + Logo.jpg + Logo.pdf → Logo.zip</div>
+                  <div class="then-example-line">Poster.ai + Poster.jpg → Poster.zip</div>
+                  <div class="then-example-line">Audio.wav + Audio.mp3 → Audio.zip</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Happens</div>
+                <div class="then-rule-box">
+                  <div class="rule-pill green">Create zip + delete originals</div>
+                  <div class="rule-note">After zipping, the original files are removed from their old location.</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Easy idea</div>
+                <div class="then-rule-box">
+                  <div class="rule-note">Useful when you want one compact package instead of many separate files.</div>
+                </div>
+              </div>
+            </div>
+            <div class="then-note"><strong>Important:</strong> this also removes the original loose files.</div>
+          </div>
+        </div>
+
+        <div class="then-card">
+          <div class="then-card-head"><span class="then-chip">THEN</span>
+            <div>
+              <div class="then-title">Copy & Zip</div>
+              <div class="then-mini">Create one zip archive but keep the original files</div>
+            </div>
+          </div>
+          <div class="then-card-body">
+            <p class="then-desc">Copy & Zip creates a zip archive from the selected files, but unlike plain Zip, it does
+              not delete the original files. So you end up with both the original files and the new zip package.</p>
+            <div class="then-layout">
+              <div class="panel-box">
+                <div class="panel-title">Examples</div>
+                <div class="then-example-list">
+                  <div class="then-example-line">Invoice.pdf + Receipt.pdf → Documents.zip</div>
+                  <div class="then-example-line">Logo.eps + Logo.jpg → Logo.zip</div>
+                  <div class="then-example-line">Slides.pptx + Notes.txt → Meeting.zip</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Happens</div>
+                <div class="then-rule-box">
+                  <div class="rule-pill green">Create zip + keep originals</div>
+                  <div class="rule-note">The originals stay where they are. A zip file is created as an extra output.
+                  </div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Easy idea</div>
+                <div class="then-rule-box">
+                  <div class="rule-note">Use this when you need a zip but do not want to lose the source files.</div>
+                </div>
+              </div>
+            </div>
+            <div class="then-note"><strong>Difference from Zip:</strong> originals stay untouched.</div>
+          </div>
+        </div>
+
+        <div class="then-card">
+          <div class="then-card-head"><span class="then-chip">THEN</span>
+            <div>
+              <div class="then-title">Move & Zip</div>
+              <div class="then-mini">Create one zip archive and remove the originals after packing</div>
+            </div>
+          </div>
+          <div class="then-card-body">
+            <p class="then-desc">Move & Zip also creates one zip archive, and the originals are removed after the
+              archive is created. In the current code, the zip itself can be placed in a chosen destination folder, so
+              it is useful when the final archive should live elsewhere.</p>
+            <div class="then-layout">
+              <div class="panel-box">
+                <div class="panel-title">Examples</div>
+                <div class="then-example-list">
+                  <div class="then-example-line">Project Files → Delivery/Project.zip</div>
+                  <div class="then-example-line">Logo Set → Archive/Logo.zip</div>
+                  <div class="then-example-line">Source Pack → Client/Source Pack.zip</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Happens</div>
+                <div class="then-rule-box">
+                  <div class="rule-pill green">Create zip + remove originals</div>
+                  <div class="rule-note">The archive becomes the final kept output. The original unpacked files are
+                    removed.</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Easy idea</div>
+                <div class="then-rule-box">
+                  <div class="rule-note">Useful when your final deliverable should be one zip file in another folder.
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="then-note"><strong>Think of it as:</strong> keep the packed version, not the loose files.</div>
+          </div>
+        </div>
+
+        <div class="then-card">
+          <div class="then-card-head"><span class="then-chip">THEN</span>
+            <div>
+              <div class="then-title">Move & Delete</div>
+              <div class="then-mini">Move matching files and permanently delete the rest</div>
+            </div>
+          </div>
+          <div class="then-card-body">
+            <p class="then-desc">Move & Delete is a split action. Files that match the IF rule are moved to the chosen
+              destination. Files that do not match are permanently deleted. So this action is used like a strong filter:
+              keep the important set, destroy the rest.</p>
+            <div class="then-layout">
+              <div class="panel-box">
+                <div class="panel-title">Examples</div>
+                <div class="then-example-list">
+                  <div class="then-example-line">Keep jpg → move jpg, delete png/pdf/txt</div>
+                  <div class="then-example-line">Keep mp4 → move mp4, delete wav/srt/jpg</div>
+                  <div class="then-example-line">Keep eps+pdf → move those, delete others</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">What Happens</div>
+                <div class="then-rule-box">
+                  <div class="rule-pill green">Move matches + delete non-matches</div>
+                  <div class="rule-note">Matching files are kept by moving them. Non-matching files are removed
+                    permanently.</div>
+                </div>
+              </div>
+              <div class="panel-box">
+                <div class="panel-title">Easy idea</div>
+                <div class="then-rule-box">
+                  <div class="rule-note">Use this only when you are sure you want to keep a very specific set and remove
+                    the rest.</div>
+                </div>
+              </div>
+            </div>
+            <div class="then-note"><strong>Important:</strong> unmatched files are deleted.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════
+        FOOTER
+  ════════════════════════════════════════════════════ -->
+  <style>
+    .footer {
+      text-align: center;
+      padding: 24px 0;
+      margin-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .footer-icon {
+      width: 18px;
+      height: 18px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 10px;
+      overflow: hidden;
+    }
+
+    .footer-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .footer-desc {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+  </style>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-logo">
+        <div class="footer-icon">
+          <img src="icon.png" alt="R" onerror="imgErr(this)">
+        </div>
+        Renom
+      </div>
+      <div class="footer-desc">Quick Start Guide</div>
+    </div>
+  </footer>
+
+
+  <!-- ═══════════════════════════════════════════════════
+        SCRIPT
+  ════════════════════════════════════════════════════ -->
+  <script>
+    // Copy to clipboard + show toast
+    function copyText(text) {
+      if (text == null) return;
+      navigator.clipboard.writeText(text).then(() => {
+        const toast = document.getElementById('toast');
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2000);
+      });
+    }
+
+    // Smooth scroll for nav links
+    document.querySelectorAll('.nav-links a').forEach(link => {
+      link.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) target.scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+
+    // ScrollSpy functionality to highlight active nav link
+    function updateActiveNav() {
+      const sections = document.querySelectorAll('section[id]');
+      const navLinks = document.querySelectorAll('.nav-links a');
+      let currentSectionId = '';
+
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        if (window.scrollY >= sectionTop - 80) {
+          currentSectionId = section.getAttribute('id');
+        }
+      });
+
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === `#${currentSectionId}`) {
+          link.classList.add('active');
+        }
+      });
+    }
+
+    window.addEventListener('scroll', updateActiveNav);
+    window.addEventListener('DOMContentLoaded', updateActiveNav);
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const scrollTopLogo = document.getElementById('scrollTopLogo');
+      if (scrollTopLogo) {
+        scrollTopLogo.addEventListener('click', () => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      }
+
+      const formatBlocks = document.querySelectorAll('#formatting .fmt-block');
+      formatBlocks.forEach(block => {
+        const heading = block.querySelector('.fmt-heading');
+        if (!heading) return;
+
+        heading.addEventListener('click', () => {
+          const isActive = block.classList.contains('active');
+
+          formatBlocks.forEach(otherBlock => {
+            otherBlock.classList.remove('active');
+          });
+
+          if (!isActive) {
+            block.classList.add('active');
+            block.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      });
+
+      const logicCards = document.querySelectorAll('#findreplace .logic-card');
+      logicCards.forEach(card => {
+        card.addEventListener('click', (event) => {
+          if (event.target.closest('.logic-code')) return;
+
+          const isActive = card.classList.contains('active');
+          logicCards.forEach(otherCard => otherCard.classList.remove('active'));
+
+          if (!isActive) {
+            card.classList.add('active');
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
+      });
+
+      const ifCards = document.querySelectorAll('#ifthen .if-card');
+      ifCards.forEach(card => {
+        card.addEventListener('click', () => {
+          const isActive = card.classList.contains('active');
+          ifCards.forEach(other => other.classList.remove('active'));
+          if (!isActive) {
+            card.classList.add('active');
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
+      });
+
+      const thenCards = document.querySelectorAll('#ifthen .then-card');
+      thenCards.forEach(card => {
+        card.addEventListener('click', () => {
+          const isActive = card.classList.contains('active');
+          thenCards.forEach(other => other.classList.remove('active'));
+          if (!isActive) {
+            card.classList.add('active');
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
+      });
+    });
+
+  </script>
+
+</body>
+
+</html>
